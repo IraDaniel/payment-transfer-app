@@ -29,4 +29,8 @@ public class Account implements Serializable {
     public void credit(BigDecimal amount) {
         balance = balance.add(amount);
     }
+
+    public boolean hasEnoughMoney(BigDecimal amount) {
+        return balance.compareTo(amount) >= 0;
+    }
 }

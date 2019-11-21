@@ -1,15 +1,17 @@
 package io.daniel.service;
 
+import io.daniel.dto.Transfer;
+
 /**
  * Created by Ira on 21.11.2019.
  */
 public class TestThread implements Runnable {
-    private BankService bankService;
-    private TransferTest transferTest;
+    private BankServiceImpl bankService;
+    private Transfer transfer;
 
-    public TestThread(BankService bankService, TransferTest transferTest) {
+    public TestThread(BankServiceImpl bankService, Transfer transfer) {
         this.bankService = bankService;
-        this.transferTest = transferTest;
+        this.transfer = transfer;
     }
 
     public void run() {
@@ -20,7 +22,7 @@ public class TestThread implements Runnable {
 
     private void processCommand() {
         try {
-            bankService.transfer(transferTest.from, transferTest.to, transferTest.amount);
+            bankService.transferMoney(transfer.getIdAccountFrom(), transfer.getIdAccountTo(), transfer.getAmount());
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

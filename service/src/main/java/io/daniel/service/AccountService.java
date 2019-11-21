@@ -28,7 +28,7 @@ public class AccountService {
     }
 
     public Account getAccount(Integer accountId) {
-        BankService.notNull(accountId, "Cannot find account, because id is not defined.");
+        BankServiceImpl.notNull(accountId, "Cannot find account, because id is not defined.");
         return accountDao.getById(accountId);
     }
 

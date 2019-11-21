@@ -1,6 +1,7 @@
 package io.daniel.service;
 
 import io.daniel.dao.AccountDao;
+import io.daniel.dto.Transfer;
 import io.daniel.exception.InsufficientFundsException;
 import io.daniel.model.Account;
 import org.junit.Assert;
@@ -21,8 +22,8 @@ import static org.mockito.Mockito.when;
  */
 @RunWith(MockitoJUnitRunner.class)
 public class BankServiceTest {
-
-    private final BankService bankService = BankService.getInstance();
+    
+    private final BankServiceImpl bankService = BankServiceImpl.getInstance();
 
     @InjectMocks
     private final AccountService accountService = AccountService.getInstance();
@@ -39,8 +40,10 @@ public class BankServiceTest {
         when(accountDao.create(to)).thenReturn(1);
         from.setId(0);
         to.setId(1);
-        bankService.transfer(from, to, new BigDecimal(23));
+        when(accountDao.getById(0)).thenReturn(from);
+        when(accountDao.getById(1)).thenReturn(to);
 
+        bankService.transferMoney(0, 1, new BigDecimal(23));
         Assert.assertEquals(from.getBalance(), new BigDecimal(100));
         Assert.assertEquals(to.getBalance(), new BigDecimal(146));
     }
@@ -53,7 +56,9 @@ public class BankServiceTest {
         when(accountDao.create(to)).thenReturn(1);
         from.setId(0);
         to.setId(1);
-        bankService.transfer(from, to, new BigDecimal(26));
+        when(accountDao.getById(0)).thenReturn(from);
+        when(accountDao.getById(1)).thenReturn(to);
+        bankService.transferMoney(0, 1, new BigDecimal(26));
     }
 
     @Test
@@ -64,10 +69,12 @@ public class BankServiceTest {
         when(accountDao.create(to)).thenReturn(1);
         from.setId(0);
         to.setId(1);
+        when(accountDao.getById(0)).thenReturn(from);
+        when(accountDao.getById(1)).thenReturn(to);
 
         ExecutorService executor = Executors.newFixedThreadPool(5);
-        executor.execute(new TestThread(bankService, new TransferTest(from, to, new BigDecimal(26))));
-        executor.execute(new TestThread(bankService, new TransferTest(to, from, new BigDecimal(26))));
+        executor.execute(new TestThread(bankService, new Transfer(0, 1, new BigDecimal(26))));
+        executor.execute(new TestThread(bankService, new Transfer(1, 0, new BigDecimal(26))));
 
         executor.shutdown();
         while (!executor.isTerminated()) {

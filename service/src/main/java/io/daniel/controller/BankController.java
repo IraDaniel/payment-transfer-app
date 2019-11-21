@@ -2,7 +2,7 @@ package io.daniel.controller;
 
 
 import io.daniel.service.AccountService;
-import io.daniel.service.BankService;
+import io.daniel.service.BankServiceImpl;
 import io.daniel.utility.JsonUtility;
 import io.daniel.dto.Transfer;
 import spark.ResponseTransformer;
@@ -14,16 +14,14 @@ import static io.daniel.utility.JsonUtility.convertFromJson;
 
 public class BankController {
 
-    private BankService bankService = BankService.getInstance();
+    private BankServiceImpl bankService = BankServiceImpl.getInstance();
     private AccountService accountService = AccountService.getInstance();
+    private static final String ACCOUNT_PATH = "account";
 
     private static BankController instance;
 
     private BankController() {
-        createAccount();
-        getAccount();
-        transfer();
-        getAllAccounts();
+       initializeRouters();
     }
 
     public static BankController getInstance() {
@@ -37,8 +35,12 @@ public class BankController {
         return instance;
     }
 
-
-    private static final String ACCOUNT_PATH = "account";
+    private void initializeRouters() {
+        createAccount();
+        getAccount();
+        transfer();
+        getAllAccounts();
+    }
 
     private void transfer() {
         Spark.post("bank/transfer", (req, res) -> {
@@ -49,7 +51,6 @@ public class BankController {
     }
 
     private void getAccount() {
-
         Spark.get(ACCOUNT_PATH + "/:id", (req, res) -> accountService.getAccount(Integer.parseInt(req.params("id"))), json());
     }
 
@@ -63,7 +64,6 @@ public class BankController {
             return accountService.createNewAccount(new BigDecimal(amount));
         });
     }
-
 
     public static ResponseTransformer json() {
         return JsonUtility::convertToJson;
