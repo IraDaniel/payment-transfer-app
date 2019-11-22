@@ -1,54 +1,19 @@
 package io.daniel.service;
 
-import io.daniel.dao.AccountDao;
-import io.daniel.dao.AccountDaoLocalImpl;
 import io.daniel.model.Account;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 
-public class AccountService {
-    private static AccountDao accountDao = AccountDaoLocalImpl.getInstance();
+public interface AccountService {
 
-    private static AccountService instance;
+    Account getAccount(Integer accountId);
 
-    private AccountService() {
-    }
+    List<Account> getAllAccounts();
 
-    public static AccountService getInstance() {
-        if (instance == null) {
-            synchronized (AccountService.class) {
-                if (instance == null) {
-                    instance = new AccountService();
-                }
-            }
-        }
-        return instance;
-    }
+    Integer createNewAccount(Account account);
 
-    public Account getAccount(Integer accountId) {
-        BankService.notNull(accountId, "Cannot find account, because id is not defined.");
-        return accountDao.getById(accountId);
-    }
+    void update(List<Account> accounts);
 
-    public List<Account> getAllAccounts() {
-        return accountDao.getAll();
-    }
-
-    public Integer createNewAccount(BigDecimal amount) {
-        Account account = new Account(amount);
-        return accountDao.create(account);
-    }
-
-    public void update(List<Account> accounts) {
-        if (accounts != null) {
-            accountDao.update(accounts);
-        }
-    }
-
-    public void delete(Integer id) {
-        accountDao.delete(id);
-    }
-
+    void delete(Integer accountId);
 }

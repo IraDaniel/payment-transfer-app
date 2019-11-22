@@ -16,17 +16,33 @@ import java.math.BigDecimal;
 public class Account implements Serializable {
     public static final String ENTITY_TYPE = "Account";
     private Integer id;
-    private BigDecimal balance;
+    private Money balance;
 
-    public Account(BigDecimal balance) {
-        this.balance = balance;
+    public Account(Money money) {
+        this.balance = money;
     }
 
     public void debit(BigDecimal amount) {
-        balance = balance.subtract(amount);
+        balance.setValue(balance.getValue().subtract(amount));
     }
 
     public void credit(BigDecimal amount) {
-        balance = balance.add(amount);
+        balance.setValue(balance.getValue().add(amount));
+    }
+
+    public boolean hasEnoughMoney(BigDecimal amount) {
+        return balance.getValue().compareTo(amount) >= 0;
+    }
+
+    public boolean hasTheSameCurrencyCode(Account another) {
+        return balance.getCurrencyCode() == another.getBalance().getCurrencyCode();
+    }
+
+    public boolean hasTheSameCurrencyCode(CurrencyCode currencyCode) {
+        return balance.getCurrencyCode() == currencyCode;
+    }
+
+    public CurrencyCode getCurrencyCode() {
+        return getBalance().getCurrencyCode();
     }
 }

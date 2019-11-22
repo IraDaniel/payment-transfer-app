@@ -1,33 +1,34 @@
-package io.daniel.dao;
+package io.daniel.dao.impl;
 
+import io.daniel.dao.AccountDao;
 import io.daniel.exception.EntityNotFoundException;
 import io.daniel.model.Account;
+import spark.utils.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
-public class AccountDaoLocalImpl implements AccountDao {
+public class AccountDaoInMemoryImpl implements AccountDao {
 
-    private static AccountDaoLocalImpl instance;
-    private Map<Integer, Account> accountMap = new ConcurrentHashMap<>();
-    private static int nextId = 0;
+    private static volatile AccountDaoInMemoryImpl instance;
 
-    private AccountDaoLocalImpl() {
-    }
-
-    public static AccountDaoLocalImpl getInstance() {
+    public static AccountDaoInMemoryImpl getInstance() {
         if (instance == null) {
-            synchronized (AccountDaoLocalImpl.class) {
+            synchronized (AccountDaoInMemoryImpl.class) {
                 if (instance == null) {
-                    instance = new AccountDaoLocalImpl();
+                    instance = new AccountDaoInMemoryImpl();
                 }
             }
         }
         return instance;
     }
 
+    private Map<Integer, Account> accountMap = new ConcurrentHashMap<>();
+    private static int nextId = 0;
+
+    private AccountDaoInMemoryImpl() {
+    }
 
     public Account getById(Integer id) {
         Account account = accountMap.get(id);
@@ -57,6 +58,14 @@ public class AccountDaoLocalImpl implements AccountDao {
         accountList.forEach(account -> {
             accountMap.replace(account.getId(), account);
         });
+    }
+
+    @Override
+    public List<Account> findByIds(Collection<Integer> accountIds) {
+        if (CollectionUtils.isEmpty(accountIds)) {
+            return Collections.emptyList();
+        }
+        return accountIds.stream().map(accountMap::get).collect(Collectors.toList());
     }
 
     @Override
