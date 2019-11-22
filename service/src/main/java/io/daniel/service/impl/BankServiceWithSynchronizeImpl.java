@@ -1,7 +1,5 @@
 package io.daniel.service.impl;
 
-import io.daniel.dao.AccountDao;
-import io.daniel.dao.impl.AccountDaoInMemoryImpl;
 import io.daniel.exception.InsufficientFundsException;
 import io.daniel.model.Account;
 import io.daniel.model.Money;
@@ -14,10 +12,7 @@ import java.util.Arrays;
 import static io.daniel.utils.AssertionUtils.notNull;
 import static io.daniel.utils.CurrencyUtils.convertCurrency;
 
-/**
- * Created by Ira on 21.11.2019.
- */
-public class BankServiceSecondImpl implements BankService {
+public class BankServiceWithSynchronizeImpl implements BankService {
     private static AccountService accountService = AccountServiceImpl.getInstance();
 
     @Override

@@ -13,13 +13,17 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static java.lang.String.format;
+
 public class AccountDaoH2Impl implements AccountDao {
 
     private static final String TABLE_NAME = "ACCOUNT";
-    private static final String SELECT_FROM_ACCOUNT = "SELECT " + Column.ID + "," + Column.BALANCE + "," + Column.CURRENCY_CODE + " FROM account";
-    private static final String SELECT_FROM_ACCOUNT_BY_ID = SELECT_FROM_ACCOUNT + " where id = ?";
-    private static final String DELETE_FROM_ACCOUNT = "DELETE FROM " + TABLE_NAME + " WHERE " + Column.ID + " = ?";
-    private static final String UPDATE_ACCOUNT = "update account set balance =  ? where id = ?";
+
+    private static final String SELECT_FROM_ACCOUNT = format("SELECT %s FROM %s", String.join(",", Column.ID.name(), Column.BALANCE.name(), Column.CURRENCY_CODE.name()), TABLE_NAME);
+    private static final String SELECT_FROM_ACCOUNT_BY_ID = format(SELECT_FROM_ACCOUNT + " where %s = ?", Column.ID);
+    private static final String DELETE_FROM_ACCOUNT = format("DELETE FROM %s WHERE %s = ?", TABLE_NAME, Column.ID);
+    private static final String UPDATE_ACCOUNT = format("UPDATE %s SET %s =  ? WHERE %s = ?", TABLE_NAME, Column.BALANCE, Column.ID);
+    private static final String INSERT_INTO_ACCOUNT = format("insert into %s (%s, %s) values (?,?)", TABLE_NAME, Column.BALANCE, Column.CURRENCY_CODE);
 
     private static volatile AccountDaoH2Impl instance;
 
@@ -40,7 +44,7 @@ public class AccountDaoH2Impl implements AccountDao {
 
     @Override
     public Integer create(Account account) {
-        String sql = "insert into account (balance, currency_code) values (?,?)";
+        String sql = INSERT_INTO_ACCOUNT;
         Connection connection = connectionHolder.getConnection();
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             statement.setString(1, account.getBalance().getValue().toString());
@@ -69,7 +73,7 @@ public class AccountDaoH2Impl implements AccountDao {
                 throw new EntityNotFoundException(Account.ENTITY_TYPE, account.getId());
             }
         } catch (SQLException e) {
-            throw new DaoException(String.format("Cannot not update account with id [%s]", account.getId()), e);
+            throw new DaoException(format("Cannot not update account with id [%s]", account.getId()), e);
         }
         return account;
     }
@@ -109,7 +113,7 @@ public class AccountDaoH2Impl implements AccountDao {
                 throw new RuntimeException(e);
             }
         } catch (SQLException e) {
-            throw new DaoException(String.format("Cannot find account by id: %s", accountId), e);
+            throw new DaoException(format("Cannot find account by id: %s", accountId), e);
         }
 
         if (account == null) {

@@ -56,18 +56,13 @@ public class BankServiceImpl implements BankService {
             Account from = accountService.getAccount(fromAcctId);
             Account to = accountService.getAccount(toAcctId);
 
-            BigDecimal valueAfterConversion;
-            if (from.hasTheSameCurrencyCode(amount.getCurrencyCode())) {
-                valueAfterConversion = amount.getValue();
-            } else {
-                valueAfterConversion = convertCurrency(from.getCurrencyCode(), amount.getCurrencyCode(), amount.getValue());
-            }
+            BigDecimal valueAfterConversion = convertValueToAccountCurrency(amount, from);
 
             if (!from.hasEnoughMoney(valueAfterConversion)) {
                 throw new InsufficientFundsException("Not enough funds in the account " + from.getId());
             }
-            from.debit(amount.getValue());
 
+            from.debit(valueAfterConversion);
             if (from.hasTheSameCurrencyCode(to)) {
                 to.credit(valueAfterConversion);
             } else {
@@ -81,6 +76,16 @@ public class BankServiceImpl implements BankService {
             sortedIds.forEach(this::cleanupLock);
         }
         log.info(String.format("Transfer money from %s to %s was succeeded.", fromAcctId, toAcctId));
+    }
+
+    private static BigDecimal convertValueToAccountCurrency(Money amount, Account account) {
+        BigDecimal valueAfterConversion;
+        if (account.hasTheSameCurrencyCode(amount.getCurrencyCode())) {
+            valueAfterConversion = amount.getValue();
+        } else {
+            valueAfterConversion = convertCurrency(account.getCurrencyCode(), amount.getCurrencyCode(), amount.getValue());
+        }
+        return valueAfterConversion;
     }
 
     private static final Map<Integer, LockAndCounter> locksMap = new ConcurrentHashMap<>();
