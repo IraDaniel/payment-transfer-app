@@ -3,15 +3,16 @@ package io.daniel.dao.impl;
 import io.daniel.dao.AccountDao;
 import io.daniel.exception.EntityNotFoundException;
 import io.daniel.model.Account;
+import spark.utils.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class AccountDaoInMemoryImpl implements AccountDao {
 
     private static volatile AccountDaoInMemoryImpl instance;
+
     public static AccountDaoInMemoryImpl getInstance() {
         if (instance == null) {
             synchronized (AccountDaoInMemoryImpl.class) {
@@ -37,11 +38,6 @@ public class AccountDaoInMemoryImpl implements AccountDao {
         return account;
     }
 
-    @Override
-    public List<Account> findByIds(List<Integer> accountIds) {
-        return null;
-    }
-
     public Integer create(Account account) {
         if (account.getId() == null) {
             account.setId(createNewId());
@@ -62,6 +58,14 @@ public class AccountDaoInMemoryImpl implements AccountDao {
         accountList.forEach(account -> {
             accountMap.replace(account.getId(), account);
         });
+    }
+
+    @Override
+    public List<Account> findByIds(Collection<Integer> accountIds) {
+        if (CollectionUtils.isEmpty(accountIds)) {
+            return Collections.emptyList();
+        }
+        return accountIds.stream().map(accountMap::get).collect(Collectors.toList());
     }
 
     @Override

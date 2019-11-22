@@ -4,30 +4,51 @@ import io.daniel.dao.AccountDao;
 import io.daniel.dao.impl.AccountDaoInMemoryImpl;
 import io.daniel.exception.InsufficientFundsException;
 import io.daniel.model.Account;
+import io.daniel.model.Money;
+import io.daniel.service.AccountService;
 import io.daniel.service.BankService;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
+
+import static io.daniel.utils.AssertionUtils.notNull;
+import static io.daniel.utils.CurrencyUtils.convertCurrency;
 
 /**
  * Created by Ira on 21.11.2019.
  */
 public class BankServiceSecondImpl implements BankService {
-
-    private final AccountDao accountDao = AccountDaoInMemoryImpl.getInstance();
+    private static AccountService accountService = AccountServiceImpl.getInstance();
 
     @Override
-    public void transferMoney(Integer fromAcctId, Integer toAcctId, BigDecimal amount) throws InterruptedException {
+    public void transferMoney(Integer fromAcctId, Integer toAcctId, Money amount) throws InterruptedException {
+        notNull(fromAcctId, "Account ID to transfer money from is not specified");
+        notNull(toAcctId, "Account ID to transfer money to is not specified");
+
         class Helper {
             public void transfer() throws InsufficientFundsException {
-                Account fromAcct = accountDao.getById(fromAcctId);
-                Account toAcct = accountDao.getById(toAcctId);
-                if (!fromAcct.hasEnoughMoney(amount))
-                    throw new InsufficientFundsException("Not enough funds in the account " + fromAcctId);
-                else {
-                    fromAcct.debit(amount);
-                    toAcct.credit(amount);
+                Account fromAcct = accountService.getAccount(fromAcctId);
+                Account toAcct = accountService.getAccount(toAcctId);
+                BigDecimal valueAfterConvertingToFromCurrency;
+                if (fromAcct.hasTheSameCurrencyCode(amount.getCurrencyCode())) {
+                    valueAfterConvertingToFromCurrency = amount.getValue();
+                } else {
+                    valueAfterConvertingToFromCurrency = convertCurrency(fromAcct.getCurrencyCode(), amount.getCurrencyCode(), amount.getValue());
                 }
+
+                if (!fromAcct.hasEnoughMoney(valueAfterConvertingToFromCurrency)) {
+                    throw new InsufficientFundsException("Not enough funds in the account " + fromAcct.getId());
+                }
+                fromAcct.debit(valueAfterConvertingToFromCurrency);
+                if (!fromAcct.hasTheSameCurrencyCode(toAcct)) {
+                    BigDecimal convertedAmount = convertCurrency(fromAcct.getCurrencyCode(), toAcct.getCurrencyCode(), valueAfterConvertingToFromCurrency);
+                    toAcct.credit(convertedAmount);
+                } else {
+                    toAcct.credit(valueAfterConvertingToFromCurrency);
+                }
+                accountService.update(Arrays.asList(fromAcct, toAcct));
             }
+
         }
 
         if (fromAcctId < toAcctId) {

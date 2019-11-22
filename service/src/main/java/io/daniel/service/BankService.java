@@ -1,11 +1,11 @@
 package io.daniel.service;
 
-import java.math.BigDecimal;
+import io.daniel.model.Money;
 
 
 public interface BankService {
 
     void transferMoney(final Integer fromAcctId,
                        final Integer toAcctId,
-                       final BigDecimal amount) throws InterruptedException;
+                       final Money amount) throws InterruptedException;
 }

@@ -3,24 +3,25 @@ package io.daniel.service.impl;
 import io.daniel.dao.AccountDao;
 import io.daniel.dao.impl.AccountDaoH2Impl;
 import io.daniel.dao.impl.JdbcConnectionHolder;
+import io.daniel.exception.BusinessException;
 import io.daniel.model.Account;
 import io.daniel.model.CurrencyCode;
 import io.daniel.service.AccountService;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static io.daniel.utils.AssertionUtils.notNull;
 
 public class AccountServiceImpl implements AccountService {
 
+    private static final String ACCOUNT_ID_IS_NOT_SPECIFY = "Account ID is not specify.";
+
     private static AccountDao accountDao = AccountDaoH2Impl.getInstance();
     private static JdbcConnectionHolder connections = JdbcConnectionHolder.getInstance();
 
     private static volatile AccountServiceImpl instance;
-
     public static AccountServiceImpl getInstance() {
         if (instance == null) {
             synchronized (AccountService.class) {
@@ -33,7 +34,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     public Account getAccount(Integer accountId) {
-        notNull(accountId, "Cannot find account, because id is not defined.");
+        notNull(accountId, ACCOUNT_ID_IS_NOT_SPECIFY);
         return accountDao.getById(accountId);
     }
 
@@ -76,7 +77,7 @@ public class AccountServiceImpl implements AccountService {
                 List<Account> old = accountDao.findByIds(accountIdToCurrency.keySet());
                 boolean currencyIsNotModified = old.stream().allMatch(account -> accountIdToCurrency.get(account.getId()) == account.getCurrencyCode());
                 if (!currencyIsNotModified) {
-                    throw new RuntimeException("Try to change currency");
+                    throw new BusinessException("Try to change currency");
                 }
                 accountDao.update(accounts);
                 connections.commit();
@@ -90,7 +91,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     public void delete(Integer accountId) {
-        notNull(accountId, "Cannot remove account with undefined id.");
+        notNull(accountId, ACCOUNT_ID_IS_NOT_SPECIFY);
         try {
             connections.beginTransaction();
             accountDao.delete(accountId);

@@ -6,18 +6,21 @@ import io.daniel.exception.EntityNotFoundException;
 import io.daniel.model.Account;
 import io.daniel.model.CurrencyCode;
 import io.daniel.model.Money;
-import org.flywaydb.core.internal.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class AccountDaoH2Impl implements AccountDao {
 
+    private static final String TABLE_NAME = "ACCOUNT";
     private static final String SELECT_FROM_ACCOUNT = "SELECT " + Column.ID + "," + Column.BALANCE + "," + Column.CURRENCY_CODE + " FROM account";
     private static final String SELECT_FROM_ACCOUNT_BY_ID = SELECT_FROM_ACCOUNT + " where id = ?";
+    private static final String DELETE_FROM_ACCOUNT = "DELETE FROM " + TABLE_NAME + " WHERE " + Column.ID + " = ?";
+    private static final String UPDATE_ACCOUNT = "update account set balance =  ? where id = ?";
+
     private static volatile AccountDaoH2Impl instance;
 
     public static AccountDaoH2Impl getInstance() {
@@ -40,54 +43,54 @@ public class AccountDaoH2Impl implements AccountDao {
         String sql = "insert into account (balance, currency_code) values (?,?)";
         Connection connection = connectionHolder.getConnection();
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            statement.setBigDecimal(1, account.getBalance().getValue());
+            statement.setString(1, account.getBalance().getValue().toString());
             statement.setString(2, account.getBalance().getCurrencyCode().toString());
             statement.execute();
             ResultSet generatedKeys = statement.getGeneratedKeys();
             if (generatedKeys.next()) {
                 return generatedKeys.getInt(1);
             } else {
-                throw new DaoException("Could not create account");
+                throw new DaoException("An error has occurred during extract created ID.");
             }
         } catch (SQLException e) {
-            throw new DaoException("Could not create account", e);
+            throw new DaoException("Cannot not create account", e);
         }
     }
 
     @Override
     public Account update(Account account) {
-        String sql = "update account set balance =  ? where id = ?";
+        String sql = UPDATE_ACCOUNT;
         Connection connection = connectionHolder.getConnection();
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setBigDecimal(1, account.getBalance().getValue());
+            statement.setString(1, account.getBalance().getValue().toString());
             statement.setInt(2, account.getId());
             int updateRows = statement.executeUpdate();
             if (updateRows <= 0) {
                 throw new EntityNotFoundException(Account.ENTITY_TYPE, account.getId());
             }
         } catch (SQLException e) {
-            throw new DaoException(String.format("Could not update account with id [%s]", account.getId()), e);
+            throw new DaoException(String.format("Cannot not update account with id [%s]", account.getId()), e);
         }
         return account;
     }
 
     @Override
     public void update(List<Account> accountList) {
-        String sql = "update account set balance =  ? where id = ?";
+        String sql = UPDATE_ACCOUNT;
         Connection connection = connectionHolder.getConnection();
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             accountList.forEach(account -> {
                 try {
-                    statement.setBigDecimal(1, account.getBalance().getValue());
+                    statement.setString(1, account.getBalance().getValue().toString());
                     statement.setInt(2, account.getId());
                     statement.addBatch();
                 } catch (SQLException e) {
-                    throw new DaoException("Could not update accounts", e);
+                    throw new DaoException("Cannot not update accounts", e);
                 }
             });
             statement.executeBatch();
         } catch (SQLException e) {
-            throw new DaoException("Could not update accounts", e);
+            throw new DaoException("Cannot not update accounts", e);
         }
     }
 
@@ -109,6 +112,9 @@ public class AccountDaoH2Impl implements AccountDao {
             throw new DaoException(String.format("Cannot find account by id: %s", accountId), e);
         }
 
+        if (account == null) {
+            throw new EntityNotFoundException(Account.ENTITY_TYPE, accountId);
+        }
         return account;
     }
 
@@ -132,10 +138,10 @@ public class AccountDaoH2Impl implements AccountDao {
                     accounts.add(account);
                 }
             } catch (SQLException e) {
-                throw new DaoException("Cannot extract all accounts", e);
+                throw new DaoException("Cannot find accounts by ids.", e);
             }
         } catch (SQLException e) {
-            throw new DaoException("Cannot extract all accounts", e);
+            throw new DaoException("Cannot find accounts by ids.", e);
         }
         return accounts;
     }
@@ -160,17 +166,9 @@ public class AccountDaoH2Impl implements AccountDao {
         return accounts;
     }
 
-    public static Account getFromResultSet(ResultSet resultSet) throws SQLException {
-        Account account = new Account();
-        account.setId(Integer.parseInt(resultSet.getString(Column.ID.name())));
-        account.setBalance(new Money(resultSet.getBigDecimal(Column.BALANCE.name()),
-                CurrencyCode.valueOf(resultSet.getString(Column.CURRENCY_CODE.name()))));
-        return account;
-    }
-
     @Override
     public void delete(Integer id) {
-        String sql = "DELETE FROM account WHERE id = ?";
+        String sql = DELETE_FROM_ACCOUNT;
         Connection connection = connectionHolder.getConnection();
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, id);
@@ -178,6 +176,15 @@ public class AccountDaoH2Impl implements AccountDao {
         } catch (SQLException e) {
             throw new DaoException("Cannot remove account with ID" + id, e);
         }
+    }
+
+    public static Account getFromResultSet(ResultSet resultSet) throws SQLException {
+        Account account = new Account();
+        account.setId(Integer.parseInt(resultSet.getString(Column.ID.name())));
+        String balanceValue = resultSet.getString(Column.BALANCE.name());
+        account.setBalance(new Money(new BigDecimal(balanceValue),
+                CurrencyCode.valueOf(resultSet.getString(Column.CURRENCY_CODE.name()))));
+        return account;
     }
 
     private enum Column {

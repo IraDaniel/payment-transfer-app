@@ -2,9 +2,10 @@ package io.daniel.service.impl;
 
 import io.daniel.exception.InsufficientFundsException;
 import io.daniel.model.Account;
+import io.daniel.model.Money;
 import io.daniel.service.AccountService;
 import io.daniel.service.BankService;
-import io.daniel.utils.CurrencyUtils;
+import io.daniel.utils.AssertionUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static io.daniel.utils.AssertionUtils.notNull;
 import static io.daniel.utils.CurrencyUtils.convertCurrency;
 
 
@@ -39,10 +41,10 @@ public class BankServiceImpl implements BankService {
     }
 
     @Override
-    public void transferMoney(Integer fromAcctId, Integer toAcctId, BigDecimal amount) throws InterruptedException {
-        if (fromAcctId == null || toAcctId == null) {
-            throw new IllegalArgumentException("Id is a required parameter");
-        }
+    public void transferMoney(Integer fromAcctId, Integer toAcctId, Money amount) throws InterruptedException {
+        notNull(fromAcctId, "Account ID to transfer money from is not specified");
+        notNull(toAcctId, "Account ID to transfer money to is not specified");
+
         log.info(String.format("Transfer money from %s to %s", fromAcctId, toAcctId));
 
         List<Integer> sortedIds = Stream.of(fromAcctId, toAcctId).sorted().collect(Collectors.toList());
@@ -53,15 +55,23 @@ public class BankServiceImpl implements BankService {
             Account from = accountService.getAccount(fromAcctId);
             Account to = accountService.getAccount(toAcctId);
 
-            if (!from.hasEnoughMoney(amount)) {
+            BigDecimal valueAfterConvertingToFromCurrency;
+            if (from.hasTheSameCurrencyCode(amount.getCurrencyCode())) {
+                valueAfterConvertingToFromCurrency = amount.getValue();
+            } else {
+                valueAfterConvertingToFromCurrency = convertCurrency(from.getCurrencyCode(), amount.getCurrencyCode(), amount.getValue());
+            }
+
+            if (!from.hasEnoughMoney(valueAfterConvertingToFromCurrency)) {
                 throw new InsufficientFundsException("Not enough funds in the account " + from.getId());
             }
-            from.debit(amount);
-            if (!from.hasTheSameCurrencyCode(to)) {
-                BigDecimal convertedAmount = convertCurrency(from.getCurrencyCode(), to.getCurrencyCode(), amount);
-                to.credit(convertedAmount);
+            from.debit(amount.getValue());
+
+            if (from.hasTheSameCurrencyCode(to)) {
+                to.credit(valueAfterConvertingToFromCurrency);
             } else {
-                to.credit(amount);
+                BigDecimal convertedAmount = convertCurrency(from.getCurrencyCode(), to.getCurrencyCode(), valueAfterConvertingToFromCurrency);
+                to.credit(convertedAmount);
             }
 
             accountService.update(Arrays.asList(from, to));

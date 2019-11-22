@@ -38,6 +38,10 @@ public class Account implements Serializable {
         return balance.getCurrencyCode() == another.getBalance().getCurrencyCode();
     }
 
+    public boolean hasTheSameCurrencyCode(CurrencyCode currencyCode) {
+        return balance.getCurrencyCode() == currencyCode;
+    }
+
     public CurrencyCode getCurrencyCode() {
         return getBalance().getCurrencyCode();
     }
