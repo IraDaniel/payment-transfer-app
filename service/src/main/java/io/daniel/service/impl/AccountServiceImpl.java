@@ -22,6 +22,7 @@ public class AccountServiceImpl implements AccountService {
     private static JdbcConnectionHolder connections = JdbcConnectionHolder.getInstance();
 
     private static volatile AccountServiceImpl instance;
+
     public static AccountServiceImpl getInstance() {
         if (instance == null) {
             synchronized (AccountService.class) {
@@ -35,7 +36,18 @@ public class AccountServiceImpl implements AccountService {
 
     public Account getAccount(Integer accountId) {
         notNull(accountId, ACCOUNT_ID_IS_NOT_SPECIFY);
-        return accountDao.getById(accountId);
+        Account account;
+        try {
+            connections.beginTransaction();
+            account = accountDao.getById(accountId);
+            connections.commit();
+        } catch (Throwable e) {
+            connections.rollBack();
+            throw e;
+        } finally {
+            connections.closeConnection();
+        }
+        return account;
     }
 
     public List<Account> getAllAccounts() {

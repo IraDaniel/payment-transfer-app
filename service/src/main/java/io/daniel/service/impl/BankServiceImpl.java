@@ -21,6 +21,7 @@ import java.util.stream.Stream;
 
 import static io.daniel.utils.AssertionUtils.notNull;
 import static io.daniel.utils.CurrencyUtils.convertCurrency;
+import static io.daniel.utils.CurrencyUtils.convertValueToAccountCurrency;
 
 
 @Slf4j
@@ -53,39 +54,29 @@ public class BankServiceImpl implements BankService {
         List<LockAndCounter> lockAndCounters = extractLocks(sortedIds);
         lockAndCounters.stream().map(LockAndCounter::getLock).forEach(Lock::lock);
         try {
-            Account from = accountService.getAccount(fromAcctId);
-            Account to = accountService.getAccount(toAcctId);
+            Account fromAcct = accountService.getAccount(fromAcctId);
+            Account toAcct = accountService.getAccount(toAcctId);
 
-            BigDecimal valueAfterConversion = convertValueToAccountCurrency(amount, from);
+            BigDecimal valueAfterConversion = convertValueToAccountCurrency(amount, fromAcct.getCurrencyCode());
 
-            if (!from.hasEnoughMoney(valueAfterConversion)) {
-                throw new InsufficientFundsException("Not enough funds in the account " + from.getId());
+            if (!fromAcct.hasEnoughMoney(valueAfterConversion)) {
+                throw new InsufficientFundsException("Not enough funds in the account " + fromAcct.getId());
             }
 
-            from.debit(valueAfterConversion);
-            if (from.hasTheSameCurrencyCode(to)) {
-                to.credit(valueAfterConversion);
+            fromAcct.debit(valueAfterConversion);
+            if (fromAcct.hasTheSameCurrencyCode(toAcct)) {
+                toAcct.credit(valueAfterConversion);
             } else {
-                BigDecimal convertedAmount = convertCurrency(from.getCurrencyCode(), to.getCurrencyCode(), valueAfterConversion);
-                to.credit(convertedAmount);
+                BigDecimal convertedAmount = convertCurrency(fromAcct.getCurrencyCode(), toAcct.getCurrencyCode(), valueAfterConversion);
+                toAcct.credit(convertedAmount);
             }
 
-            accountService.update(Arrays.asList(from, to));
+            accountService.update(Arrays.asList(fromAcct, toAcct));
         } finally {
             lockAndCounters.stream().map(LockAndCounter::getLock).forEach(Lock::unlock);
             sortedIds.forEach(this::cleanupLock);
         }
         log.info(String.format("Transfer money from %s to %s was succeeded.", fromAcctId, toAcctId));
-    }
-
-    private static BigDecimal convertValueToAccountCurrency(Money amount, Account account) {
-        BigDecimal valueAfterConversion;
-        if (account.hasTheSameCurrencyCode(amount.getCurrencyCode())) {
-            valueAfterConversion = amount.getValue();
-        } else {
-            valueAfterConversion = convertCurrency(account.getCurrencyCode(), amount.getCurrencyCode(), amount.getValue());
-        }
-        return valueAfterConversion;
     }
 
     private static final Map<Integer, LockAndCounter> locksMap = new ConcurrentHashMap<>();
