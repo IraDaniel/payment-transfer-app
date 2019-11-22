@@ -3,10 +3,9 @@ package io.daniel.dao;
 import io.daniel.exception.EntityNotFoundException;
 import io.daniel.model.Account;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class AccountDaoLocalImpl implements AccountDao {
 
@@ -57,6 +56,14 @@ public class AccountDaoLocalImpl implements AccountDao {
         accountList.forEach(account -> {
             accountMap.replace(account.getId(), account);
         });
+    }
+
+    @Override
+    public List<Account> findByIds(Collection<Integer> accountIds) {
+        if (accountIds == null) {
+            return Collections.emptyList();
+        }
+        return accountIds.stream().map(accountMap::get).collect(Collectors.toList());
     }
 
     @Override

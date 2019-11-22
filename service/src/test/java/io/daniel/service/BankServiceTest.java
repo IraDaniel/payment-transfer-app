@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.daniel.TestUtils.initTestAccount;
 
@@ -50,7 +53,7 @@ public class BankServiceTest {
     public void shouldTransferMoneyInParallel() throws Exception {
         int numAccounts = 5;
         int numThreads = 20;
-        int numIterations = 1000000;
+        int numIterations = 100;
         Random rnd = new Random();
         List<Integer> accountIds = new ArrayList<>();
         for (int i = 0; i < numAccounts; i++) {
@@ -75,32 +78,40 @@ public class BankServiceTest {
     }
 
     @Test
-    public void shouldTransferMoneyInParallel_With2Thread() throws Exception {
+    public void transferMoneyInParallelInDifferentAccount() throws Exception {
         Account fromAcct = initTestAccount(new BigDecimal(26));
         Account toAcct = initTestAccount(new BigDecimal(0));
         fromAcct.setId(accountService.createNewAccount(fromAcct));
         toAcct.setId(accountService.createNewAccount(toAcct));
 
+        ExecutorService executor = Executors.newFixedThreadPool(2);
 
-        ExecutorService executor = Executors.newFixedThreadPool(5);
-        executor.execute(() -> {
-            try {
-                bankService.transferMoney(fromAcct.getId(), toAcct.getId(), new DollarAmount(new BigDecimal(20)));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
-        executor.execute(() -> {
-            try {
-                bankService.transferMoney(toAcct.getId(), fromAcct.getId(), new DollarAmount(new BigDecimal(26)));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
+        AtomicBoolean anotherThreadWasExecuted = new AtomicBoolean(false);
+        try {
+            Future<String> future = executor.submit(() -> {
+                try {
+                    bankService.transferMoney(toAcct.getId(), fromAcct.getId(), new DollarAmount(new BigDecimal(20)));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            });
 
-        executor.shutdown();
-        while (!executor.isTerminated()) {
+            Future<String> future2 = executor.submit(() -> {
+                try {
+                    bankService.transferMoney(fromAcct.getId(), toAcct.getId(), new DollarAmount(new BigDecimal(20)));
+                    anotherThreadWasExecuted.set(true);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            });
+
+            Assert.assertNull(future.get());
+            Assert.assertTrue(anotherThreadWasExecuted.get());
+            Assert.assertNull(future2.get());
+        } finally {
+
         }
-        System.out.println("Finished all threads");
     }
 }
