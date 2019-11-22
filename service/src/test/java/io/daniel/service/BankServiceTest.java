@@ -12,6 +12,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static io.daniel.TestUtils.initTestAccount;
 
@@ -28,10 +30,10 @@ public class BankServiceTest {
         from.setId(accountService.createNewAccount(from));
         to.setId(accountService.createNewAccount(to));
 
-        bankService.transferMoney(0, 1, new DollarAmount(new BigDecimal(23)));
+        bankService.transferMoney(from.getId(), to.getId(), new DollarAmount(new BigDecimal(23)));
 
-        Assert.assertEquals(from.getBalance().getValue(), new BigDecimal(100));
-        Assert.assertEquals(to.getBalance().getValue(), new BigDecimal(146));
+        Assert.assertEquals(accountService.getAccount(from.getId()).getBalance().getValue(), new BigDecimal(100));
+        Assert.assertEquals(accountService.getAccount(to.getId()).getBalance().getValue(), new BigDecimal(146));
     }
 
     @Test(expected = InsufficientFundsException.class)
@@ -41,7 +43,7 @@ public class BankServiceTest {
         from.setId(accountService.createNewAccount(from));
         to.setId(accountService.createNewAccount(to));
 
-        bankService.transferMoney(0, 1, new DollarAmount(new BigDecimal(26)));
+        bankService.transferMoney(from.getId(), to.getId(), new DollarAmount(new BigDecimal(26)));
     }
 
     @Test
@@ -70,5 +72,35 @@ public class BankServiceTest {
         }
         for (int i = 0; i < numThreads; i++)
             new TransferThread().start();
+    }
+
+    @Test
+    public void shouldTransferMoneyInParallel_With2Thread() throws Exception {
+        Account fromAcct = initTestAccount(new BigDecimal(26));
+        Account toAcct = initTestAccount(new BigDecimal(0));
+        fromAcct.setId(accountService.createNewAccount(fromAcct));
+        toAcct.setId(accountService.createNewAccount(toAcct));
+
+
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+        executor.execute(() -> {
+            try {
+                bankService.transferMoney(fromAcct.getId(), toAcct.getId(), new DollarAmount(new BigDecimal(20)));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        executor.execute(() -> {
+            try {
+                bankService.transferMoney(toAcct.getId(), fromAcct.getId(), new DollarAmount(new BigDecimal(26)));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        executor.shutdown();
+        while (!executor.isTerminated()) {
+        }
+        System.out.println("Finished all threads");
     }
 }

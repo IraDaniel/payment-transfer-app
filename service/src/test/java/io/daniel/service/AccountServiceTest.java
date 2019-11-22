@@ -14,6 +14,9 @@ import java.util.Random;
 
 import static io.daniel.TestUtils.initTestAccount;
 
+/**
+ * Trying to use PowerMock to mock singleton class: AccountDaoH2Impl,but could not resolve the errors.
+ */
 public class AccountServiceTest {
 
     private static AccountService accountService = AccountServiceImpl.getInstance();
@@ -43,6 +46,5 @@ public class AccountServiceTest {
         account.setBalance(new Money(new BigDecimal(rnd.nextInt()), CurrencyCode.RUB));
 
         accountService.update(Collections.singletonList(account));
-
     }
 }
