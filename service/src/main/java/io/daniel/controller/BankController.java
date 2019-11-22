@@ -1,27 +1,27 @@
 package io.daniel.controller;
 
 
-import io.daniel.service.AccountService;
-import io.daniel.service.BankServiceImpl;
-import io.daniel.utility.JsonUtility;
 import io.daniel.dto.Transfer;
+import io.daniel.model.Account;
+import io.daniel.service.AccountService;
+import io.daniel.service.impl.AccountServiceImpl;
+import io.daniel.service.impl.BankServiceImpl;
+import io.daniel.utils.JsonUtils;
 import spark.ResponseTransformer;
 import spark.Spark;
 
-import java.math.BigDecimal;
-
-import static io.daniel.utility.JsonUtility.convertFromJson;
+import static io.daniel.utils.JsonUtils.convertFromJson;
 
 public class BankController {
 
-    private BankServiceImpl bankService = BankServiceImpl.getInstance();
-    private AccountService accountService = AccountService.getInstance();
+    private static BankServiceImpl bankService = BankServiceImpl.getInstance();
+    private static AccountService accountService = AccountServiceImpl.getInstance();
     private static final String ACCOUNT_PATH = "account";
 
-    private static BankController instance;
+    private static volatile BankController instance;
 
     private BankController() {
-       initializeRouters();
+        initializeRouters();
     }
 
     public static BankController getInstance() {
@@ -35,14 +35,14 @@ public class BankController {
         return instance;
     }
 
-    private void initializeRouters() {
+    private static void initializeRouters() {
         createAccount();
         getAccount();
         transfer();
         getAllAccounts();
     }
 
-    private void transfer() {
+    private static void transfer() {
         Spark.post("bank/transfer", (req, res) -> {
             Transfer transfer = convertFromJson(req.body(), Transfer.class);
             bankService.transferMoney(transfer.getIdAccountFrom(), transfer.getIdAccountTo(), transfer.getAmount());
@@ -50,22 +50,22 @@ public class BankController {
         });
     }
 
-    private void getAccount() {
+    private static void getAccount() {
         Spark.get(ACCOUNT_PATH + "/:id", (req, res) -> accountService.getAccount(Integer.parseInt(req.params("id"))), json());
     }
 
-    private void getAllAccounts() {
+    private static void getAllAccounts() {
         Spark.get(ACCOUNT_PATH, (req, res) -> accountService.getAllAccounts(), json());
     }
 
-    private void createAccount() {
+    private static void createAccount() {
         Spark.post(ACCOUNT_PATH, (req, res) -> {
-            String amount = req.queryParams("amount");
-            return accountService.createNewAccount(new BigDecimal(amount));
+            Account account = convertFromJson(req.body(), Account.class);
+            return accountService.createNewAccount(account);
         });
     }
 
     public static ResponseTransformer json() {
-        return JsonUtility::convertToJson;
+        return JsonUtils::convertToJson;
     }
 }

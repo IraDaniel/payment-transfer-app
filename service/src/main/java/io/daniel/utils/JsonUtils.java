@@ -1,4 +1,4 @@
-package io.daniel.utility;
+package io.daniel.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.io.Serializable;
 
 
-public class JsonUtility {
+public class JsonUtils {
 
     public static <T extends Serializable> T convertFromJson(String jsonString, Class<T> serializableClass) {
         ObjectMapper mapper = new ObjectMapper();
@@ -32,6 +32,6 @@ public class JsonUtility {
         return methodInString;
     }
 
-    private JsonUtility() {
+    private JsonUtils() {
     }
 }

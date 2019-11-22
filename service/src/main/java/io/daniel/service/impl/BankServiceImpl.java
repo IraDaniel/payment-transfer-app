@@ -1,7 +1,10 @@
-package io.daniel.service;
+package io.daniel.service.impl;
 
 import io.daniel.exception.InsufficientFundsException;
 import io.daniel.model.Account;
+import io.daniel.service.AccountService;
+import io.daniel.service.BankService;
+import io.daniel.utils.CurrencyUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
@@ -14,16 +17,15 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static io.daniel.utils.CurrencyUtils.convertCurrency;
+
 
 @Slf4j
 public class BankServiceImpl implements BankService {
-    private static BankServiceImpl instance;
-    private static AccountService accountService = AccountService.getInstance();
 
-    private Map<Integer, Lock> lockMap = new ConcurrentHashMap<>();
+    private static AccountService accountService = AccountServiceImpl.getInstance();
 
-    private BankServiceImpl() {
-    }
+    private static volatile BankServiceImpl instance;
 
     public static BankServiceImpl getInstance() {
         if (instance == null) {
@@ -50,11 +52,18 @@ public class BankServiceImpl implements BankService {
         try {
             Account from = accountService.getAccount(fromAcctId);
             Account to = accountService.getAccount(toAcctId);
+
             if (!from.hasEnoughMoney(amount)) {
                 throw new InsufficientFundsException("Not enough funds in the account " + from.getId());
             }
             from.debit(amount);
-            to.credit(amount);
+            if (!from.hasTheSameCurrencyCode(to)) {
+                BigDecimal convertedAmount = convertCurrency(from.getCurrencyCode(), to.getCurrencyCode(), amount);
+                to.credit(convertedAmount);
+            } else {
+                to.credit(amount);
+            }
+
             accountService.update(Arrays.asList(from, to));
         } finally {
             locks.forEach(Lock::unlock);
@@ -65,9 +74,8 @@ public class BankServiceImpl implements BankService {
         lockMap.remove(toAcctId);
     }
 
-    public static void notNull(Object object, String message) {
-        if (object == null) {
-            throw new IllegalArgumentException(message);
-        }
+    private final Map<Integer, Lock> lockMap = new ConcurrentHashMap<>();
+
+    private BankServiceImpl() {
     }
 }

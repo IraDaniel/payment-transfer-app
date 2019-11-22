@@ -1,9 +1,10 @@
-package io.daniel.service;
+package io.daniel.service.impl;
 
 import io.daniel.dao.AccountDao;
-import io.daniel.dao.AccountDaoLocalImpl;
+import io.daniel.dao.impl.AccountDaoInMemoryImpl;
 import io.daniel.exception.InsufficientFundsException;
 import io.daniel.model.Account;
+import io.daniel.service.BankService;
 
 import java.math.BigDecimal;
 
@@ -12,7 +13,7 @@ import java.math.BigDecimal;
  */
 public class BankServiceSecondImpl implements BankService {
 
-    private final AccountDao accountDao = AccountDaoLocalImpl.getInstance();
+    private final AccountDao accountDao = AccountDaoInMemoryImpl.getInstance();
 
     @Override
     public void transferMoney(Integer fromAcctId, Integer toAcctId, BigDecimal amount) throws InterruptedException {
@@ -20,7 +21,7 @@ public class BankServiceSecondImpl implements BankService {
             public void transfer() throws InsufficientFundsException {
                 Account fromAcct = accountDao.getById(fromAcctId);
                 Account toAcct = accountDao.getById(toAcctId);
-                if (fromAcct.getBalance().compareTo(amount) < 0)
+                if (!fromAcct.hasEnoughMoney(amount))
                     throw new InsufficientFundsException("Not enough funds in the account " + fromAcctId);
                 else {
                     fromAcct.debit(amount);

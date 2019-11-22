@@ -1,5 +1,6 @@
-package io.daniel.dao;
+package io.daniel.dao.impl;
 
+import io.daniel.dao.AccountDao;
 import io.daniel.exception.EntityNotFoundException;
 import io.daniel.model.Account;
 
@@ -8,26 +9,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class AccountDaoLocalImpl implements AccountDao {
+public class AccountDaoInMemoryImpl implements AccountDao {
 
-    private static AccountDaoLocalImpl instance;
-    private Map<Integer, Account> accountMap = new ConcurrentHashMap<>();
-    private static int nextId = 0;
-
-    private AccountDaoLocalImpl() {
-    }
-
-    public static AccountDaoLocalImpl getInstance() {
+    private static volatile AccountDaoInMemoryImpl instance;
+    public static AccountDaoInMemoryImpl getInstance() {
         if (instance == null) {
-            synchronized (AccountDaoLocalImpl.class) {
+            synchronized (AccountDaoInMemoryImpl.class) {
                 if (instance == null) {
-                    instance = new AccountDaoLocalImpl();
+                    instance = new AccountDaoInMemoryImpl();
                 }
             }
         }
         return instance;
     }
 
+    private Map<Integer, Account> accountMap = new ConcurrentHashMap<>();
+    private static int nextId = 0;
+
+    private AccountDaoInMemoryImpl() {
+    }
 
     public Account getById(Integer id) {
         Account account = accountMap.get(id);
@@ -35,6 +35,11 @@ public class AccountDaoLocalImpl implements AccountDao {
             throw new EntityNotFoundException(Account.ENTITY_TYPE, id);
         }
         return account;
+    }
+
+    @Override
+    public List<Account> findByIds(List<Integer> accountIds) {
+        return null;
     }
 
     public Integer create(Account account) {

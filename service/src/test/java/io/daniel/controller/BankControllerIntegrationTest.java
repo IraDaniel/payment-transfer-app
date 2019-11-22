@@ -3,7 +3,8 @@ package io.daniel.controller;
 import io.daniel.Main;
 import io.daniel.dto.Transfer;
 import io.daniel.model.Account;
-import io.daniel.utility.JsonUtility;
+import io.daniel.model.DollarAmount;
+import io.daniel.utils.JsonUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.HttpGet;
@@ -39,11 +40,14 @@ public class BankControllerIntegrationTest {
 
     @Test
     public void aNewAccountShouldBeCreated() throws IOException {
-        HttpUriRequest request = new HttpPost(BASE_PATH + "/account?amount=123");
+        HttpUriRequest request = RequestBuilder.create("POST")
+                .setUri(BASE_PATH + "/account")
+                .setEntity(new StringEntity(JsonUtils.convertToJson(initTestAccount(new BigDecimal(123))), ContentType.APPLICATION_JSON))
+                .build();
         HttpResponse httpResponse = HttpClientBuilder.create().build().execute(request);
+        Assert.assertEquals(httpResponse.getStatusLine().getStatusCode(), HttpStatus.SC_OK);
         String body = IOUtils.toString(httpResponse.getEntity().getContent());
-
-        System.out.println(body);
+        Assert.assertFalse(body.isEmpty());
     }
 
     @Test
@@ -58,7 +62,7 @@ public class BankControllerIntegrationTest {
         Assert.assertEquals(httpResponse2.getStatusLine().getStatusCode(), HttpStatus.SC_OK);
         String body2 = IOUtils.toString(httpResponse2.getEntity().getContent());
 
-        Account account = JsonUtility.convertFromJson(body2, Account.class);
+        Account account = JsonUtils.convertFromJson(body2, Account.class);
 
         Assert.assertNotNull(account);
         Assert.assertEquals(account.getId(), new Integer(body));
@@ -78,7 +82,7 @@ public class BankControllerIntegrationTest {
 
         HttpUriRequest request = RequestBuilder.create("POST")
                 .setUri(BASE_PATH + "/bank/transfer")
-                .setEntity(new StringEntity(JsonUtility.convertToJson(transfer), ContentType.APPLICATION_JSON))
+                .setEntity(new StringEntity(JsonUtils.convertToJson(transfer), ContentType.APPLICATION_JSON))
                 .build();
         HttpResponse httpResponse = HttpClientBuilder.create().build().execute(request);
         Assert.assertEquals(httpResponse.getStatusLine().getStatusCode(), HttpStatus.SC_OK);
@@ -103,14 +107,17 @@ public class BankControllerIntegrationTest {
 
         HttpUriRequest request = RequestBuilder.create("POST")
                 .setUri(BASE_PATH + "/bank/transfer")
-                .setEntity(new StringEntity(JsonUtility.convertToJson(transfer), ContentType.APPLICATION_JSON))
+                .setEntity(new StringEntity(JsonUtils.convertToJson(transfer), ContentType.APPLICATION_JSON))
                 .build();
         HttpResponse httpResponse = HttpClientBuilder.create().build().execute(request);
         Assert.assertEquals(httpResponse.getStatusLine().getStatusCode(), HttpStatus.SC_INTERNAL_SERVER_ERROR);
     }
 
     private Integer createNewAccount(BigDecimal amount) throws IOException {
-        HttpUriRequest request = new HttpPost(BASE_PATH + "/account?amount=" + amount);
+        HttpUriRequest request = RequestBuilder.create("POST")
+                .setUri(BASE_PATH + "/account")
+                .setEntity(new StringEntity(JsonUtils.convertToJson(initTestAccount(amount)), ContentType.APPLICATION_JSON))
+                .build();
         HttpResponse httpResponse = HttpClientBuilder.create().build().execute(request);
         return Integer.parseInt(IOUtils.toString(httpResponse.getEntity().getContent()));
     }
@@ -119,6 +126,10 @@ public class BankControllerIntegrationTest {
         HttpUriRequest request = new HttpGet(BASE_PATH + "/account/" + id);
         HttpResponse httpResponse = HttpClientBuilder.create().build().execute(request);
         String body = IOUtils.toString(httpResponse.getEntity().getContent());
-        return JsonUtility.convertFromJson(body, Account.class);
+        return JsonUtils.convertFromJson(body, Account.class);
+    }
+
+    private static Account initTestAccount(BigDecimal balance) {
+        return new Account(new DollarAmount(balance));
     }
 }
