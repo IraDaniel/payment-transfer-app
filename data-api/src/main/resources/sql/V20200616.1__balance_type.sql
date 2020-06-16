@@ -1,0 +1,1 @@
+alter table account ALTER COLUMN BALANCE BIGINT;

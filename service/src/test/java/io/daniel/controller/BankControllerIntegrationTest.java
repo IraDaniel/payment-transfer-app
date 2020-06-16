@@ -57,7 +57,7 @@ public class BankControllerIntegrationTest {
 
     @Test
     public void getsTheSameAccountAsWasCreated() throws IOException {
-        Account testAccount = initTestAccount(new BigDecimal(123.2));
+        Account testAccount = initTestAccount(new BigDecimal(12320));
         HttpUriRequest request = RequestBuilder.create("POST")
                 .setUri(BASE_PATH + "/account")
                 .setEntity(new StringEntity(JsonUtils.convertToJson(testAccount), ContentType.APPLICATION_JSON))

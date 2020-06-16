@@ -47,7 +47,7 @@ public class AccountDaoH2Impl implements AccountDao {
         String sql = INSERT_INTO_ACCOUNT;
         Connection connection = connectionHolder.getConnection();
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            statement.setString(1, account.getBalance().getValue().toString());
+            statement.setBigDecimal(1, account.getBalance().getValue());
             statement.setString(2, account.getBalance().getCurrencyCode().toString());
             statement.execute();
             ResultSet generatedKeys = statement.getGeneratedKeys();
@@ -66,7 +66,7 @@ public class AccountDaoH2Impl implements AccountDao {
         String sql = UPDATE_ACCOUNT;
         Connection connection = connectionHolder.getConnection();
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, account.getBalance().getValue().toString());
+            statement.setBigDecimal(1, account.getBalance().getValue());
             statement.setInt(2, account.getId());
             int updateRows = statement.executeUpdate();
             if (updateRows <= 0) {
@@ -85,7 +85,7 @@ public class AccountDaoH2Impl implements AccountDao {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             accountList.forEach(account -> {
                 try {
-                    statement.setString(1, account.getBalance().getValue().toString());
+                    statement.setBigDecimal(1, account.getBalance().getValue());
                     statement.setInt(2, account.getId());
                     statement.addBatch();
                 } catch (SQLException e) {
@@ -185,9 +185,8 @@ public class AccountDaoH2Impl implements AccountDao {
     public static Account getFromResultSet(ResultSet resultSet) throws SQLException {
         Account account = new Account();
         account.setId(Integer.parseInt(resultSet.getString(Column.ID.name())));
-        String balanceValue = resultSet.getString(Column.BALANCE.name());
-        account.setBalance(new Money(new BigDecimal(balanceValue),
-                CurrencyCode.valueOf(resultSet.getString(Column.CURRENCY_CODE.name()))));
+        BigDecimal balanceValue = resultSet.getBigDecimal(Column.BALANCE.name());
+        account.setBalance(new Money(balanceValue, CurrencyCode.valueOf(resultSet.getString(Column.CURRENCY_CODE.name()))));
         return account;
     }
 

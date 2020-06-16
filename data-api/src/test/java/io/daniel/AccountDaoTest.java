@@ -35,7 +35,7 @@ public class AccountDaoTest {
     @Test
     public void getsTheSameAccountAsWasCreated() {
         Random rnd = new Random();
-        Account origin = initTestAccount(new BigDecimal(rnd.nextDouble()));
+        Account origin = initTestAccount(new BigDecimal(rnd.nextInt()));
         Integer id = accountDao.create(origin);
 
         Account created = accountDao.getById(id);
